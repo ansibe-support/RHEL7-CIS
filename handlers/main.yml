@@ -1,2 +1,10 @@
 ---
 # handlers file for RHEL7-CIS-Security-Standards
+- name: systemd restart tmp.mount
+  systemd:
+      name: tmp.mount
+      daemon_reload: yes
+      enabled: yes
+      masked: no
+      state: reloaded
+  ignore_errors: True

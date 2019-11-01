@@ -1,0 +1,116 @@
+---
+# tasks file for RHEL7-CIS-Security-Standards
+- name: RHEL7-CIS-Security-Standards | Ansible Version Verification | This Script Only Support  ansible >=2.8.5 |
+  fail:
+    msg: "TO Operate this playbook the ansible  version is 2.8 or greater."
+  when: not ansible_version.full | version_compare('2.8', '>=')
+  tags:
+    - always  
+
+- name: RHEL7-CIS-Security-Standards | Verification OS Distribution | This playbook Only Supports RHEL 7 and CentOS 7 |
+  fail:
+    msg: "This role Can be RUN on top RHEL and CentOS 7 version . {{ ansible_os_family }} {{ ansible_distribution_major_version }} is not supported."
+  when:
+    -  (ansible_os_family == "RedHat" and ansible_distribution_major_version | version_compare('7', '!=') or 
+    -  (ansible_os_family == "CentOS" and ansible_distribution_major_version | version_compare('7', '!=')
+  tags:
+    - always
+
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.1.1 |  Ensure mounting of cramfs filesystems is disabled (Scored) | /etc/modprobe.d/CIS.conf
+  stat:
+    path: '/etc/modprobe.d/CIS.conf'
+  register: modprobe_status
+  tags:
+    - level-1
+    - level-2
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.1.1 |  display register value
+  debug:
+    msg: display register value is "{{ modprobe_status }}"
+  tags:
+    - level-1
+    - level-2
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.1.1 |1.1.1.2 |1.1.1.3 |1.1.1.4 |1.1.1.5 |1.1.1.6 |1.1.1.7 | 1.1.1.8 | ensure carmsf,freevxfs,jffs2,hfs,hfsplus,squashfs,udf,vfat mount is disabled
+  blockinfile: 
+    path: '/etc/modprobe.d/CIS.conf'
+    bloc: |
+      install cramfs /bin/true
+      install freevxfs /bin/true
+      install jffs2 /bin/true
+      install hfs /bin/true
+      install hfsplus /bin/true
+      install squashfs /bin/true
+      install udf /bin/true
+      install vfat /bin/true
+  when: (modprobe_status.stat.exists is not defined or not modprobe_status.stat.exists)
+  tags: 
+    - level-1
+    - level-2 
+
+
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.1.1 |  ensure carmsf mount is disabled
+  copy:
+    dest: "/etc/modprobe.d/CIS.conf"
+    content: "install cramfs /bin/true"
+  when: modprobe_status.stat.exists is not defined or not modprobe_status.stat.exists
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.1.2 |  ensure freevxfs mount is disabled
+  lineinfile:
+    dest: "/etc/modprobe.d/CIS.conf"
+    regexp: "^install cramfs"
+    line: "install freevxfs /bin/true"
+  when: modprobe_status.stat.exists is not defined or not modprobe_status.stat.exists
+# - name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.1.3 |  ensure freevxfs mount is disabled
+#   lineinfile:
+#     dest: "/etc/modprobe.d/CIS.conf"
+#     regexp: "^install cramfs"
+#     line: "install freevxfs /bin/true"
+#   when: modprobe_status.stat.exists is not defined or not modprobe_status.stat.exists
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.2 | Ensure separate partition exists for /tmp 
+  systemd:
+    name: tmp.mount
+    enabled: yes
+    daemon_reload: yes
+    masked: no
+    state: started
+  when: (ansible_os_family == "RedHat") or (ansible_os_family == "CentOS")
+  tags:
+    - level-2
+
+- name: "RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.3 | Ensure nodev option set on /tmp partition\n
+         1.1.4 |  Ensure nosuid option set on /tmp partition\n
+         1.1.5 | Ensure noexec option set on /tmp partition"
+  lineinfile:
+    path: '/etc/systemd/system/local-fs.target.wants/tmp.mount'
+    regexp: '^Options='
+    line: 'Options=mode=1777,strictatime,noexec,nodev,nosuid'
+  notify: systemd restart tmp.mount
+  when: (ansible_os_family == "RedHat") or (ansible_os_family == "CentOS")
+  tags:
+    - level-1
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.6 |Ensure separate partition exists for /var
+  command: 'sh mount | grep "on /var " '
+  register: varstaus
+  changed_when: no
+  failed_when: no
+  when:
+    - level-2
+
+- name: RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.7 |Ensure separate partition exists for /var/tmp
+  command: 'sh mount | grep "on /var/tmp " '
+  register: vartmpstaus
+  changed_when: no
+  failed_when: no
+  when:
+    - level-2
+
+# - name:  RHEL7 and CentOS 7 - CIS-Security-Standards | 1.1.8 | Ensure nodev option set on /var/tmp partition
+  
+
+
+
